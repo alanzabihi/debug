@@ -168,12 +168,24 @@ function formatArgs(args) {
 	const {namespace: name, useColors} = this;
 
 	if (useColors) {
-		const c = this.color;
-		const colorCode = '\u001B[3' + (c < 8 ? c : '8;5;' + c);
-		const prefix = `  ${colorCode};1m${name} \u001B[0m`;
-
-		args[0] = prefix + args[0].split('\n').join('\n' + prefix);
-		args.push(colorCode + 'm+' + module.exports.humanize(this.diff) + '\u001B[0m');
+		const colorCode = this._colorCode;
+		const prefix = this._colorPrefix;
+		const firstArg = args[0];
+		if (firstArg.indexOf('\n') === -1) {
+			args[0] = prefix + firstArg;
+		} else {
+			args[0] = prefix + firstArg.split('\n').join('\n' + prefix);
+		}
+		const {diff} = this;
+		let humanized;
+		if (diff === this._lastDiff) {
+			humanized = this._lastHumanized;
+		} else {
+			humanized = module.exports.humanize(diff);
+			this._lastDiff = diff;
+			this._lastHumanized = humanized;
+		}
+		args.push(colorCode + 'm+' + humanized + '\u001B[0m');
 	} else {
 		args[0] = getDate() + name + ' ' + args[0];
 	}
@@ -235,6 +247,16 @@ function init(debug) {
 	for (let i = 0; i < keys.length; i++) {
 		debug.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
 	}
+
+	if (debug.useColors) {
+		const c = debug.color;
+		const colorCode = '\u001B[3' + (c < 8 ? c : '8;5;' + c);
+		debug._colorCode = colorCode;
+		debug._colorPrefix = '  ' + colorCode + ';1m' + debug.namespace + ' \u001B[0m';
+	}
+
+	debug._lastDiff = -1;
+	debug._lastHumanized = '';
 }
 
 module.exports = require('./common')(exports);

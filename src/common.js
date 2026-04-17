@@ -59,6 +59,7 @@ function setup(env) {
 	*/
 	function createDebug(namespace) {
 		let prevTime;
+		let prevCurr;
 		let enableOverride = null;
 		let namespacesCache;
 		let enabledCache;
@@ -73,10 +74,8 @@ function setup(env) {
 
 			// Set `diff` timestamp
 			const curr = Date.now();
-			const ms = curr - (prevTime || curr);
-			self.diff = ms;
-			self.prev = prevTime;
-			self.curr = curr;
+			self.diff = curr - (prevTime || curr);
+			prevCurr = prevTime;
 			prevTime = curr;
 
 			args[0] = createDebug.coerce(args[0]);
@@ -144,6 +143,23 @@ function setup(env) {
 		if (typeof createDebug.init === 'function') {
 			createDebug.init(debug);
 		}
+
+		Object.defineProperty(debug, 'prev', {
+			enumerable: true,
+			configurable: true,
+			get: () => prevCurr,
+			set: v => {
+				prevCurr = v;
+			}
+		});
+		Object.defineProperty(debug, 'curr', {
+			enumerable: true,
+			configurable: true,
+			get: () => prevTime,
+			set: v => {
+				prevTime = v;
+			}
+		});
 
 		return debug;
 	}
