@@ -1,4 +1,3 @@
-
 /**
  * This is the common logic for both the Node.js and web browser
  * implementations of `debug()`.
@@ -59,27 +58,36 @@ function setup(env) {
 	*/
 	function createDebug(namespace) {
 		let prevTime;
+		let prevCurr;
 		let enableOverride = null;
 		let namespacesCache;
 		let enabledCache;
 
-		function debug(...args) {
+		function debug() {
 			// Disabled?
 			if (!debug.enabled) {
 				return;
+			}
+
+			// eslint-disable-next-line prefer-rest-params
+			const argsLen = arguments.length;
+			const args = new Array(argsLen);
+			for (let i = 0; i < argsLen; i++) {
+				// eslint-disable-next-line prefer-rest-params
+				args[i] = arguments[i];
 			}
 
 			const self = debug;
 
 			// Set `diff` timestamp
 			const curr = Date.now();
-			const ms = curr - (prevTime || curr);
-			self.diff = ms;
-			self.prev = prevTime;
-			self.curr = curr;
+			self.diff = curr - (prevTime || curr);
+			prevCurr = prevTime;
 			prevTime = curr;
 
-			args[0] = createDebug.coerce(args[0]);
+			if (typeof args[0] !== 'string') {
+				args[0] = createDebug.coerce(args[0]);
+			}
 
 			if (typeof args[0] !== 'string') {
 				// Anything else let's inspect with %O
@@ -89,23 +97,44 @@ function setup(env) {
 			// Apply any `formatters` transformations
 			if (args[0].indexOf('%') !== -1) {
 				let index = 0;
-				args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
-					// If we encounter an escaped % then don't increase the array index
-					if (match === '%%') {
-						return '%';
+				const orig = args[0];
+				const len = orig.length;
+				let result = '';
+				let last = 0;
+				let p = 0;
+				while (p < len) {
+					const pos = orig.indexOf('%', p);
+					if (pos === -1 || pos + 1 >= len) {
+						break;
+					}
+					const code = orig.charCodeAt(pos + 1);
+					if (code === 37) {
+						// %% escape -> %
+						result += orig.substring(last, pos) + '%';
+						p = pos + 2;
+						last = p;
+						continue;
+					}
+					if (!((code >= 65 && code <= 90) || (code >= 97 && code <= 122))) {
+						p = pos + 1;
+						continue;
 					}
 					index++;
-					const formatter = createDebug.formatters[format];
+					const formatter = createDebug.formatters[orig.charAt(pos + 1)];
 					if (typeof formatter === 'function') {
 						const val = args[index];
-						match = formatter.call(self, val);
-
-						// Now we need to remove `args[index]` since it's inlined in the `format`
+						result += orig.substring(last, pos) + formatter.call(self, val);
 						args.splice(index, 1);
 						index--;
+						p = pos + 2;
+						last = p;
+					} else {
+						p = pos + 2;
 					}
-					return match;
-				});
+				}
+				if (last !== 0) {
+					args[0] = result + orig.substring(last);
+				}
 			}
 
 			// Apply env-specific formatting (colors, etc.)
@@ -137,6 +166,24 @@ function setup(env) {
 			},
 			set: v => {
 				enableOverride = v;
+			}
+		});
+
+		Object.defineProperty(debug, 'prev', {
+			enumerable: true,
+			configurable: true,
+			get: () => prevCurr,
+			set: v => {
+				prevCurr = v;
+			}
+		});
+
+		Object.defineProperty(debug, 'curr', {
+			enumerable: true,
+			configurable: true,
+			get: () => prevTime,
+			set: v => {
+				prevTime = v;
 			}
 		});
 
