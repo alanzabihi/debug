@@ -1,2 +1,3 @@
 thesis	attempt	metric	baseline	status	summary
 #1	thesis/1-replace-number-new-date-with-date-now	106.4000	117.8600	accepted	Replaced Number(new Date()) with Date.now() on common.js:75. Primary 117.86 -> 106.40 ms (-11.46 ms, 9.7% faster). Guard 25.90 -> 26.12 ms (+0.22 ms, within 3 ms tolerance). Fingerprints match. 16 tests pass, lint warnings only.
+#2	thesis/2-fast-path-format-strings-without-specifiers	104.6200	117.8600	accepted	Wrapped format regex in indexOf('%') check on common.js:91. Skips regex replacement entirely when args[0] has no format specifiers (~50% of bench calls). Primary 117.86 -> 104.62 ms (-13.24 ms, 11.2%). Guard 25.90 -> 24.72 ms (slight improvement). Fingerprints match. 16 tests pass, lint warnings only.
