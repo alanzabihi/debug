@@ -4,6 +4,8 @@
  * implementations of `debug()`.
  */
 
+const FORMAT_REGEX = /%([a-zA-Z%])/g;
+
 function setup(env) {
 	createDebug.debug = createDebug;
 	createDebug.default = createDebug;
@@ -89,7 +91,7 @@ function setup(env) {
 			// Apply any `formatters` transformations
 			if (args[0].indexOf('%') !== -1) {
 				let index = 0;
-				args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
+				args[0] = args[0].replace(FORMAT_REGEX, (match, format) => {
 					// If we encounter an escaped % then don't increase the array index
 					if (match === '%%') {
 						return '%';
