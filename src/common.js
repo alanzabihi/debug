@@ -88,24 +88,30 @@ function setup(env) {
 
 			// Apply any `formatters` transformations
 			if (args[0].indexOf('%') !== -1) {
-				let index = 0;
-				args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
+				const original = args;
+				const newArgs = [null];
+				let nextArgIndex = 1;
+				const formatted = original[0].replace(/%([a-zA-Z%])/g, (match, format) => {
 					// If we encounter an escaped % then don't increase the array index
 					if (match === '%%') {
 						return '%';
 					}
-					index++;
+					const val = original[nextArgIndex];
+					nextArgIndex++;
 					const formatter = createDebug.formatters[format];
 					if (typeof formatter === 'function') {
-						const val = args[index];
-						match = formatter.call(self, val);
-
-						// Now we need to remove `args[index]` since it's inlined in the `format`
-						args.splice(index, 1);
-						index--;
+						return formatter.call(self, val);
 					}
+					// Not a registered formatter: keep %X in the string, push val as-is
+					newArgs.push(val);
 					return match;
 				});
+				newArgs[0] = formatted;
+				// Append any remaining unconsumed args
+				for (let i = nextArgIndex; i < original.length; i++) {
+					newArgs.push(original[i]);
+				}
+				args = newArgs;
 			}
 
 			// Apply env-specific formatting (colors, etc.)
