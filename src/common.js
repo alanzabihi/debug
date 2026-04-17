@@ -89,23 +89,47 @@ function setup(env) {
 			// Apply any `formatters` transformations
 			if (args[0].indexOf('%') !== -1) {
 				let index = 0;
-				args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
-					// If we encounter an escaped % then don't increase the array index
-					if (match === '%%') {
-						return '%';
+				const orig = args[0];
+				const len = orig.length;
+				let result = '';
+				let last = 0;
+				let i = 0;
+				while (i < len) {
+					const p = orig.indexOf('%', i);
+					if (p === -1 || p + 1 >= len) {
+						break;
+					}
+					const code = orig.charCodeAt(p + 1);
+					// Mirrors /%([a-zA-Z%])/g
+					if (code === 37) {
+						// %% escape -> %
+						result += orig.substring(last, p) + '%';
+						i = p + 2;
+						last = i;
+						continue;
+					}
+					if (!((code >= 65 && code <= 90) || (code >= 97 && code <= 122))) {
+						i = p + 1;
+						continue;
 					}
 					index++;
-					const formatter = createDebug.formatters[format];
+					const formatter = createDebug.formatters[orig.charAt(p + 1)];
 					if (typeof formatter === 'function') {
 						const val = args[index];
-						match = formatter.call(self, val);
-
+						result += orig.substring(last, p) + formatter.call(self, val);
 						// Now we need to remove `args[index]` since it's inlined in the `format`
 						args.splice(index, 1);
 						index--;
+						i = p + 2;
+						last = i;
+					} else {
+						// Unknown format letter: leave verbatim, advance past it
+						i = p + 2;
 					}
-					return match;
-				});
+				}
+				if (last !== 0) {
+					args[0] = result + orig.substring(last);
+				}
 			}
 
 			// Apply env-specific formatting (colors, etc.)
