@@ -235,6 +235,28 @@ function init(debug) {
 	for (let i = 0; i < keys.length; i++) {
 		debug.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
 	}
+
+	if (debug.useColors) {
+		const c = debug.color;
+		const colorCode = '\u001B[3' + (c < 8 ? c : '8;5;' + c);
+		const prefix = '  ' + colorCode + ';1m' + debug.namespace + ' \u001B[0m';
+		const suffixStart = colorCode + 'm+';
+		const suffixEnd = '\u001B[0m';
+		debug._formatArgs = function (args) {
+			const firstArg = args[0];
+			if (firstArg.indexOf('\n') === -1) {
+				args[0] = prefix + firstArg;
+			} else {
+				args[0] = prefix + firstArg.split('\n').join('\n' + prefix);
+			}
+			args.push(suffixStart + module.exports.humanize(this.diff) + suffixEnd);
+		};
+	} else {
+		const name = debug.namespace;
+		debug._formatArgs = function (args) {
+			args[0] = getDate() + name + ' ' + args[0];
+		};
+	}
 }
 
 module.exports = require('./common')(exports);

@@ -109,7 +109,11 @@ function setup(env) {
 			}
 
 			// Apply env-specific formatting (colors, etc.)
-			createDebug.formatArgs.call(self, args);
+			if (self._formatArgs) {
+				self._formatArgs(args);
+			} else {
+				createDebug.formatArgs.call(self, args);
+			}
 
 			const logFn = self.log || createDebug.log;
 			logFn.apply(self, args);
