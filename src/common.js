@@ -63,14 +63,25 @@ function setup(env) {
 		let namespacesCache;
 		let enabledCache;
 
-		function debug(...args) {
+		function debug() {
 			// Disabled?
 			if (!debug.enabled) {
 				return;
 			}
 
-			const self = debug;
+			// Hand off to specialized enabled path.
+			// Manual arguments copy (avoids rest-param cost on disabled path).
+			// eslint-disable-next-line prefer-rest-params
+			const argsLen = arguments.length;
+			const args = new Array(argsLen);
+			for (let i = 0; i < argsLen; i++) {
+				// eslint-disable-next-line prefer-rest-params
+				args[i] = arguments[i];
+			}
+			enabledDebug(debug, args);
+		}
 
+		function enabledDebug(self, args) {
 			// Set `diff` timestamp
 			const curr = Date.now();
 			const ms = curr - (prevTime || curr);
