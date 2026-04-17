@@ -168,9 +168,8 @@ function formatArgs(args) {
 	const {namespace: name, useColors} = this;
 
 	if (useColors) {
-		const c = this.color;
-		const colorCode = '\u001B[3' + (c < 8 ? c : '8;5;' + c);
-		const prefix = `  ${colorCode};1m${name} \u001B[0m`;
+		const colorCode = this._colorCode;
+		const prefix = this._colorPrefix;
 
 		args[0] = prefix + args[0].split('\n').join('\n' + prefix);
 		args.push(colorCode + 'm+' + module.exports.humanize(this.diff) + '\u001B[0m');
@@ -234,6 +233,13 @@ function init(debug) {
 	const keys = Object.keys(exports.inspectOpts);
 	for (let i = 0; i < keys.length; i++) {
 		debug.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
+	}
+
+	if (debug.useColors) {
+		const c = debug.color;
+		const colorCode = '\u001B[3' + (c < 8 ? c : '8;5;' + c);
+		debug._colorCode = colorCode;
+		debug._colorPrefix = `  ${colorCode};1m${debug.namespace} \u001B[0m`;
 	}
 }
 
