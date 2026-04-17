@@ -1,8 +1,9 @@
-
 /**
  * This is the common logic for both the Node.js and web browser
  * implementations of `debug()`.
  */
+
+const FORMAT_RE = /%([a-zA-Z%])/g;
 
 function setup(env) {
 	createDebug.debug = createDebug;
@@ -59,27 +60,36 @@ function setup(env) {
 	*/
 	function createDebug(namespace) {
 		let prevTime;
+		let prevCurr;
 		let enableOverride = null;
 		let namespacesCache;
 		let enabledCache;
 
-		function debug(...args) {
+		function debug() {
 			// Disabled?
 			if (!debug.enabled) {
 				return;
+			}
+
+			// eslint-disable-next-line prefer-rest-params
+			const argsLen = arguments.length;
+			const args = new Array(argsLen);
+			for (let i = 0; i < argsLen; i++) {
+				// eslint-disable-next-line prefer-rest-params
+				args[i] = arguments[i];
 			}
 
 			const self = debug;
 
 			// Set `diff` timestamp
 			const curr = Date.now();
-			const ms = curr - (prevTime || curr);
-			self.diff = ms;
-			self.prev = prevTime;
-			self.curr = curr;
+			self.diff = curr - (prevTime || curr);
+			prevCurr = prevTime;
 			prevTime = curr;
 
-			args[0] = createDebug.coerce(args[0]);
+			if (typeof args[0] !== 'string') {
+				args[0] = createDebug.coerce(args[0]);
+			}
 
 			if (typeof args[0] !== 'string') {
 				// Anything else let's inspect with %O
@@ -89,7 +99,7 @@ function setup(env) {
 			// Apply any `formatters` transformations
 			if (args[0].indexOf('%') !== -1) {
 				let index = 0;
-				args[0] = args[0].replace(/%([a-zA-Z%])/g, (match, format) => {
+				args[0] = args[0].replace(FORMAT_RE, (match, format) => {
 					// If we encounter an escaped % then don't increase the array index
 					if (match === '%%') {
 						return '%';
@@ -144,6 +154,24 @@ function setup(env) {
 		if (typeof createDebug.init === 'function') {
 			createDebug.init(debug);
 		}
+
+		Object.defineProperty(debug, 'prev', {
+			enumerable: true,
+			configurable: true,
+			get: () => prevCurr,
+			set: v => {
+				prevCurr = v;
+			}
+		});
+
+		Object.defineProperty(debug, 'curr', {
+			enumerable: true,
+			configurable: true,
+			get: () => prevTime,
+			set: v => {
+				prevTime = v;
+			}
+		});
 
 		return debug;
 	}
