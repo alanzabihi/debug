@@ -229,12 +229,7 @@ function load() {
  */
 
 function init(debug) {
-	debug.inspectOpts = {};
-
-	const keys = Object.keys(exports.inspectOpts);
-	for (let i = 0; i < keys.length; i++) {
-		debug.inspectOpts[keys[i]] = exports.inspectOpts[keys[i]];
-	}
+	debug.inspectOpts = Object.assign({}, exports.inspectOpts);
 }
 
 module.exports = require('./common')(exports);
