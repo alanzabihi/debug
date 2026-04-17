@@ -63,10 +63,15 @@ function setup(env) {
 		let namespacesCache;
 		let enabledCache;
 
-		function debug(...args) {
+		function debug() {
 			// Disabled?
 			if (!debug.enabled) {
 				return;
+			}
+
+			const args = new Array(arguments.length); // eslint-disable-line prefer-rest-params
+			for (let i = 0; i < args.length; i++) {
+				args[i] = arguments[i]; // eslint-disable-line prefer-rest-params
 			}
 
 			const self = debug;
