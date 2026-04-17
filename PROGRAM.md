@@ -22,7 +22,6 @@ Reduce the wall-clock time of the `debug` module's **enabled logging path**, mea
 ### Workloads
 
 - **Workload A — Enabled path (primary):** 50,000 iterations of 4 debug calls each (plain string, `%s`/`%d` substitution, `%O` object inspection, multiline message) with colors enabled and `hideDate` set. Exercises the full hot path: timestamp diff, coerce, format-string regex, formatter dispatch, `args.splice`, `formatArgs` (ANSI color codes, `split('\n').join`, `ms.humanize`), and log dispatch. **This is the primary optimization target.**
-
 - **Workload B — Disabled path (guard):** 2,000,000 calls to a debug instance whose namespace does not match `DEBUG`. Exercises only the `enabled` getter (closure variable check) and early return. **This is the guard metric — it may not regress beyond 3 ms.**
 
 ### Why this split
@@ -72,20 +71,13 @@ The `debug` module processes output in this pipeline: **create instance → chec
 ### Hot path analysis (enabled path)
 
 1. **Timestamp diff** (`common.js:74-80`) — `Number(new Date())` allocates a Date object per call. `Date.now()` is faster and available since ES5.
-
 2. **Format string regex** (`common.js:91-107`) — `args[0].replace(/%([a-zA-Z%])/g, callback)` runs a regex with a callback on every enabled call. The regex is recompiled each time. Pre-compiling or avoiding regex entirely for common patterns (no `%` in message) could help.
-
 3. **Array splice in formatter loop** (`common.js:103`) — `args.splice(index, 1)` shifts remaining elements. For messages with multiple formatters, this is O(n) per formatter. Building a new array instead of mutating could be cheaper.
-
-4. **`formatArgs` string operations** (`node.js:167-180`) — With colors: template literal for prefix, `split('\n').join('\n' + prefix)` for multiline, `ms.humanize()` for diff suffix. Without colors: `getDate()` + string concatenation.
-
-5. **`ms.humanize()` per call** (`node.js:176`) — Called on every enabled log to format the diff. The `ms` library does number comparisons and string concatenation. For repeated similar diffs, caching could help.
-
-6. **`split('\n').join('\n' + prefix)`** (`node.js:175`) — Splits and rejoins the formatted message. For single-line messages (the common case), this is wasted work.
-
-7. **`formatters.o` split/map/join** (`node.js:248-253`) — `util.inspect(v).split('\n').map(str => str.trim()).join(' ')` creates multiple intermediate arrays. Could be replaced with a single regex.
-
-8. **`coerce()` check** (`common.js:82, 272-277`) — `instanceof Error` check on every call. Cheap but runs before the string type check.
+4. `**formatArgs` string operations** (`node.js:167-180`) — With colors: template literal for prefix, `split('\n').join('\n' + prefix)` for multiline, `ms.humanize()` for diff suffix. Without colors: `getDate()` + string concatenation.
+5. `**ms.humanize()` per call** (`node.js:176`) — Called on every enabled log to format the diff. The `ms` library does number comparisons and string concatenation. For repeated similar diffs, caching could help.
+6. `**split('\n').join('\n' + prefix)`** (`node.js:175`) — Splits and rejoins the formatted message. For single-line messages (the common case), this is wasted work.
+7. `**formatters.o` split/map/join** (`node.js:248-253`) — `util.inspect(v).split('\n').map(str => str.trim()).join(' ')` creates multiple intermediate arrays. Could be replaced with a single regex.
+8. `**coerce()` check** (`common.js:82, 272-277`) — `instanceof Error` check on every call. Cheap but runs before the string type check.
 
 ### Disabled path (guard)
 
