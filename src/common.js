@@ -63,10 +63,18 @@ function setup(env) {
 		let namespacesCache;
 		let enabledCache;
 
-		function debug(...args) {
+		function debug() {
 			// Disabled?
 			if (!debug.enabled) {
 				return;
+			}
+
+			// eslint-disable-next-line prefer-rest-params
+			const argsLen = arguments.length;
+			const args = new Array(argsLen);
+			for (let i = 0; i < argsLen; i++) {
+				// eslint-disable-next-line prefer-rest-params
+				args[i] = arguments[i];
 			}
 
 			const self = debug;
@@ -79,7 +87,10 @@ function setup(env) {
 			self.curr = curr;
 			prevTime = curr;
 
-			args[0] = createDebug.coerce(args[0]);
+			// Inline coerce: only call if not a string (coerce is a no-op for strings)
+			if (typeof args[0] !== 'string') {
+				args[0] = createDebug.coerce(args[0]);
+			}
 
 			if (typeof args[0] !== 'string') {
 				// Anything else let's inspect with %O
