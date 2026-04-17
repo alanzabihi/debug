@@ -79,11 +79,13 @@ function setup(env) {
 			self.curr = curr;
 			prevTime = curr;
 
-			args[0] = createDebug.coerce(args[0]);
-
 			if (typeof args[0] !== 'string') {
-				// Anything else let's inspect with %O
-				args.unshift('%O');
+				args[0] = createDebug.coerce(args[0]);
+
+				if (typeof args[0] !== 'string') {
+					// Anything else let's inspect with %O
+					args.unshift('%O');
+				}
 			}
 
 			// Apply any `formatters` transformations
